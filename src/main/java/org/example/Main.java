@@ -115,12 +115,21 @@ public class Main {
         System.out.println("Clients after: " + service.getAll().size());
     }
 
-    private static void startH2ConsoleAndWait() throws SQLException, IOException {
-        Server.createWebServer("-web", "-webAllowOthers", "-webPort", "8082").start();
-        System.out.println("\nH2 console: http://localhost:8082");
-        System.out.println("   JDBC URL: " + JDBC_URL);
-        System.out.println("   User: " + DB_USER + " (no password)");
-        System.out.println("Press Enter to exit...");
-        System.in.read();
+    private static void startH2ConsoleAndWait() {
+        Server server = null;
+        try {
+            server = Server.createWebServer("-web", "-webAllowOthers", "-webPort", "8082").start();
+            System.out.println("\nH2 console: http://localhost:8082");
+            System.out.println("   JDBC URL: " + JDBC_URL);
+            System.out.println("   User: " + DB_USER + " (no password)");
+            System.out.println("Press Enter to exit...");
+            System.in.read();
+        } catch (Exception e) {
+            System.err.println("Failed to start H2 console: " + e.getMessage());
+        } finally {
+            if (server != null) {
+                server.stop();
+            }
+        }
     }
 }
