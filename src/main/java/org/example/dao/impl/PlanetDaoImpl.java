@@ -1,5 +1,6 @@
-package org.example.service;
+package org.example.dao.impl;
 
+import org.example.dao.PlanetDao;
 import org.example.entity.Planet;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -8,14 +9,15 @@ import org.hibernate.Transaction;
 import java.util.List;
 import java.util.Optional;
 
-public class PlanetCrudService {
+public class PlanetDaoImpl implements PlanetDao {
 
     private final SessionFactory sessionFactory;
 
-    public PlanetCrudService(SessionFactory sessionFactory) {
+    public PlanetDaoImpl(SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
     }
 
+    @Override
     public Planet save(Planet planet) {
         try (Session session = sessionFactory.openSession()) {
             Transaction tx = session.beginTransaction();
@@ -30,18 +32,21 @@ public class PlanetCrudService {
         }
     }
 
+    @Override
     public Optional<Planet> findById(String id) {
         try (Session session = sessionFactory.openSession()) {
             return Optional.ofNullable(session.find(Planet.class, id));
         }
     }
 
+    @Override
     public List<Planet> findAll() {
         try (Session session = sessionFactory.openSession()) {
             return session.createQuery("FROM Planet ORDER BY id", Planet.class).list();
         }
     }
 
+    @Override
     public Planet update(Planet planet) {
         try (Session session = sessionFactory.openSession()) {
             Transaction tx = session.beginTransaction();
@@ -56,6 +61,7 @@ public class PlanetCrudService {
         }
     }
 
+    @Override
     public boolean deleteById(String id) {
         try (Session session = sessionFactory.openSession()) {
             Transaction tx = session.beginTransaction();

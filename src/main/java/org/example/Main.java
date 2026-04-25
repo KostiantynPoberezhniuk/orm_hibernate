@@ -1,9 +1,15 @@
 package org.example;
 
+import org.example.dao.ClientDao;
+import org.example.dao.PlanetDao;
+import org.example.dao.impl.ClientDaoImpl;
+import org.example.dao.impl.PlanetDaoImpl;
 import org.example.entity.Client;
 import org.example.entity.Planet;
-import org.example.service.ClientCrudService;
-import org.example.service.PlanetCrudService;
+import org.example.service.ClientService;
+import org.example.service.PlanetService;
+import org.example.service.impl.ClientServiceImpl;
+import org.example.service.impl.PlanetServiceImpl;
 import org.flywaydb.core.Flyway;
 import org.h2.tools.Server;
 import org.hibernate.SessionFactory;
@@ -26,8 +32,11 @@ public class Main {
         try (SessionFactory sessionFactory = buildSessionFactory()) {
             System.out.println("Hibernate SessionFactory started successfully.");
 
-            ClientCrudService clientService = new ClientCrudService(sessionFactory);
-            PlanetCrudService planetService = new PlanetCrudService(sessionFactory);
+            ClientDao clientDao = new ClientDaoImpl(sessionFactory);
+            ClientService clientService = new ClientServiceImpl(clientDao);
+
+            PlanetDao planetDao = new PlanetDaoImpl(sessionFactory);
+            PlanetService planetService = new PlanetServiceImpl(planetDao);
 
             runPlanetCrudDemo(planetService);
             runClientCrudDemo(clientService);
@@ -55,57 +64,55 @@ public class Main {
                 .buildSessionFactory();
     }
 
-    private static void runPlanetCrudDemo(PlanetCrudService service) {
+    private static void runPlanetCrudDemo(PlanetService service) {
         System.out.println("\n=============== PLANET CRUD ===============");
-        System.out.println("Planets before: " + service.findAll().size());
+        System.out.println("Planets before: " + service.getAll().size());
 
-        Planet neptune = service.save(new Planet("NEPTUNE", "Neptune"));
+        Planet neptune = service.create("NEPTUNE", "Neptune");
         System.out.println("CREATE: " + neptune);
 
-        Optional<Planet> found = service.findById("NEPTUNE");
+        Optional<Planet> found = service.getById("NEPTUNE");
         System.out.println("READ by id:  " + found.orElse(null));
 
-        List<Planet> all = service.findAll();
+        List<Planet> all = service.getAll();
         System.out.println("READ all (" + all.size() + "): " + all);
 
-        neptune.setName("Neptune (Ice Giant)");
-        Planet updated = service.update(neptune);
+        Planet updated = service.rename("NEPTUNE", "Neptune (Ice Giant)");
         System.out.println("UPDATE: " + updated);
-        System.out.println("Verify after update: " + service.findById("NEPTUNE").orElse(null));
+        System.out.println("Verify after update: " + service.getById("NEPTUNE").orElse(null));
 
-        boolean deleted = service.deleteById("NEPTUNE");
+        boolean deleted = service.delete("NEPTUNE");
         System.out.println("DELETE: success=" + deleted);
-        System.out.println("Verify after delete: " + service.findById("NEPTUNE").orElse(null));
+        System.out.println("Verify after delete: " + service.getById("NEPTUNE").orElse(null));
 
-        System.out.println("Planets after: " + service.findAll().size());
+        System.out.println("Planets after: " + service.getAll().size());
     }
 
-    private static void runClientCrudDemo(ClientCrudService service) {
+    private static void runClientCrudDemo(ClientService service) {
         System.out.println("\n=============== CLIENT CRUD ===============");
-        System.out.println("Clients before: " + service.findAll().size());
+        System.out.println("Clients before: " + service.getAll().size());
 
-        Client newClient = service.save(new Client("Test Client"));
+        Client newClient = service.create("Test Client");
         Long newId = newClient.getId();
         System.out.println("CREATE: " + newClient + " (assigned id=" + newId + ")");
 
-        Optional<Client> found = service.findById(newId);
+        Optional<Client> found = service.getById(newId);
         System.out.println("READ by id:  " + found.orElse(null));
 
-        System.out.println("READ all count: " + service.findAll().size());
+        System.out.println("READ all count: " + service.getAll().size());
 
-        newClient.setName("Renamed Test Client");
-        Client updated = service.update(newClient);
+        Client updated = service.rename(newId, "Renamed Test Client");
         System.out.println("UPDATE: " + updated);
-        System.out.println("Verify after update: " + service.findById(newId).orElse(null));
+        System.out.println("Verify after update: " + service.getById(newId).orElse(null));
 
-        boolean deleted = service.deleteById(newId);
+        boolean deleted = service.delete(newId);
         System.out.println("DELETE: success=" + deleted);
-        System.out.println("Verify after delete: " + service.findById(newId).orElse(null));
+        System.out.println("Verify after delete: " + service.getById(newId).orElse(null));
 
-        boolean deleteMissing = service.deleteById(999_999L);
+        boolean deleteMissing = service.delete(999_999L);
         System.out.println("DELETE non-existent: success=" + deleteMissing + " (expected false)");
 
-        System.out.println("Clients after: " + service.findAll().size());
+        System.out.println("Clients after: " + service.getAll().size());
     }
 
     private static void startH2ConsoleAndWait() throws SQLException, IOException {
