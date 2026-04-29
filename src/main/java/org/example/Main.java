@@ -2,14 +2,19 @@ package org.example;
 
 import org.example.dao.ClientDao;
 import org.example.dao.PlanetDao;
+import org.example.dao.TicketDao;
 import org.example.dao.impl.ClientDaoImpl;
 import org.example.dao.impl.PlanetDaoImpl;
+import org.example.dao.impl.TicketDaoImpl;
 import org.example.entity.Client;
 import org.example.entity.Planet;
+import org.example.entity.Ticket;
 import org.example.service.ClientService;
 import org.example.service.PlanetService;
+import org.example.service.TicketService;
 import org.example.service.impl.ClientServiceImpl;
 import org.example.service.impl.PlanetServiceImpl;
+import org.example.service.impl.TicketServiceImpl;
 import org.flywaydb.core.Flyway;
 import org.h2.tools.Server;
 import org.hibernate.SessionFactory;
@@ -38,8 +43,12 @@ public class Main {
             PlanetDao planetDao = new PlanetDaoImpl(sessionFactory);
             PlanetService planetService = new PlanetServiceImpl(planetDao);
 
+            TicketDao ticketDao = new TicketDaoImpl(sessionFactory);
+            TicketService ticketService = new TicketServiceImpl(ticketDao, clientDao, planetDao);
+
             runPlanetCrudDemo(planetService);
             runClientCrudDemo(clientService);
+            runTicketCrudDemo(ticketService);
 
             startH2ConsoleAndWait();
         }
@@ -61,6 +70,7 @@ public class Main {
                 .configure("hibernate.cfg.xml")
                 .addAnnotatedClass(Client.class)
                 .addAnnotatedClass(Planet.class)
+                .addAnnotatedClass(Ticket.class)
                 .buildSessionFactory();
     }
 
@@ -113,6 +123,57 @@ public class Main {
         System.out.println("DELETE non-existent: success=" + deleteMissing + " (expected false)");
 
         System.out.println("Clients after: " + service.getAll().size());
+    }
+
+    private static void runTicketCrudDemo(TicketService service) {
+        System.out.println("\n=============== TICKET CRUD ===============");
+        System.out.println("Tickets before: " + service.getAll().size());
+
+        Ticket created = service.create(1L, "EARTH", "MARS");
+        Long id = created.getId();
+        System.out.println("CREATE: " + created);
+
+        System.out.println("READ by id: " + service.getById(id).orElse(null));
+        System.out.println("READ all count: " + service.getAll().size());
+
+        Ticket updated = service.changeRoute(id, "MARS", "JUP");
+        System.out.println("UPDATE: " + updated);
+
+        boolean deleted = service.delete(id);
+        System.out.println("DELETE: success=" + deleted);
+
+        System.out.println("Tickets after: " + service.getAll().size());
+
+        runNegativeCases(service);
+    }
+
+    private static void runNegativeCases(TicketService service) {
+        System.out.println("\n--- Negative cases ---");
+
+        expectFail(() -> service.create(null, "EARTH", "MARS"),
+                "null clientId");
+        expectFail(() -> service.create(999_999L, "EARTH", "MARS"),
+                "non-existent client");
+        expectFail(() -> service.create(1L, null, "MARS"),
+                "null fromPlanetId");
+        expectFail(() -> service.create(1L, "EARTH", null),
+                "null toPlanetId");
+        expectFail(() -> service.create(1L, "NO_SUCH", "MARS"),
+                "non-existent fromPlanet");
+        expectFail(() -> service.create(1L, "EARTH", "NO_SUCH"),
+                "non-existent toPlanet");
+        expectFail(() -> service.create(1L, "EARTH", "EARTH"),
+                "same from and to");
+    }
+
+    private static void expectFail(Runnable action, String label) {
+        try {
+            action.run();
+            System.out.println("  [FAIL] " + label + " — exception expected");
+        } catch (RuntimeException e) {
+            System.out.println("  [OK]   " + label + " — "
+                    + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
     }
 
     private static void startH2ConsoleAndWait() {
